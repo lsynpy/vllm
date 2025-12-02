@@ -6,13 +6,11 @@ from vllm.config import KVTransferConfig
 
 
 def read_prompts():
-    context = "Hi " * 1000
-    context2 = "Hey " * 500
     return [
-        context + "Hello, my name is",
-        context + "The capital of France is",
-        context2 + "Your name is",
-        context2 + "The capital of China is",
+        "Hello, my name is",
+        "The capital of France is",
+        "Your name is",
+        "The capital of China is",
     ]
 
 
@@ -22,15 +20,18 @@ def main():
     sampling_params = SamplingParams(temperature=0, top_p=0.95, max_tokens=1)
 
     llm = LLM(
-        model="meta-llama/Llama-3.2-1B-Instruct",
+        model="Qwen/Qwen3-0.6B",
         enforce_eager=True,
         gpu_memory_utilization=0.8,
+        max_num_batched_tokens=64,
+        max_num_seqs=16,
         kv_transfer_config=KVTransferConfig(
             kv_connector="SharedStorageConnector",
             kv_role="kv_both",
             kv_connector_extra_config={"shared_storage_path": "local_storage"},
         ),
-    )  # , max_model_len=2048, max_num_batched_tokens=2048)
+        max_model_len=2048,
+    )
 
     # 1ST generation (prefill instance)
     outputs = llm.generate(

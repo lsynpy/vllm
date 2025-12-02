@@ -155,6 +155,11 @@ class RejectionSampler(nn.Module):
                 output_token_ids,
             )
 
+        logger.info(
+            "rejection sampling: draft_token_ids: %s, output_token_ids: %s",
+            metadata.draft_token_ids.tolist(),
+            output_token_ids.tolist(),
+        )
         return SamplerOutput(
             sampled_token_ids=output_token_ids,
             logprobs_tensors=logprobs_tensors,

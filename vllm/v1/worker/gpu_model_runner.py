@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, cast
 
 import numpy as np
 import torch
-import torch.distributed
 import torch.nn as nn
 from tqdm import tqdm
 
@@ -2862,6 +2861,12 @@ class GPUModelRunner(
                 assert model_output_broadcast_data is not None
                 logits = model_output_broadcast_data["logits"]
 
+        logger.info(
+            "forward pass get hidden states: %s, sample_hidden_states: %s, logits: %s",
+            hidden_states.shape,
+            sample_hidden_states.shape,
+            logits.shape,
+        )
         self.execute_model_state = ExecuteModelState(
             scheduler_output,
             logits,
@@ -5006,6 +5011,14 @@ class GPUModelRunner(
         self.may_reinitialize_input_batch(kv_cache_config, kernel_block_sizes)
         kv_caches = self.initialize_kv_cache_tensors(
             kv_cache_config, kernel_block_sizes
+        )
+
+        total_kv_cache_bytes = sum(tensor.nbytes for tensor in kv_caches.values())
+        logger.info_once(
+            f"allocated {total_kv_cache_bytes / (1024**3):.2f} GB, "
+            f"{kv_cache_config.num_blocks} blocks, "
+            f"{total_kv_cache_bytes / (1024**2) / kv_cache_config.num_blocks:.2f}"
+            f"MB per block, block size: {kernel_block_sizes}"
         )
 
         if self.speculative_config and self.speculative_config.use_eagle():
