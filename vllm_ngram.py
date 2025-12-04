@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+import os
+
+os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
+
 from transformers import AutoTokenizer
 
 from vllm import LLM, SamplingParams
 from vllm.v1.metrics.reader import Counter, Vector
 
-# Hardcoded parameters
 MODEL_DIR = "Qwen/Qwen3-0.6B"
 NUM_SPEC_TOKENS = 2
 PROMPT_LOOKUP_MAX = 5
@@ -13,7 +16,6 @@ PROMPT_LOOKUP_MIN = 2
 TEMPERATURE = 0
 OUTPUT_LEN = 32
 
-# Sample prompts
 PROMPTS = [
     # "Hello, my name is",
     # "The capital of France is",

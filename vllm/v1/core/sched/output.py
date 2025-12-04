@@ -63,17 +63,18 @@ class NewRequestData:
         )
 
     def __repr__(self) -> str:
-        prompt_embeds_shape = self.prompt_embeds.shape if self.prompt_embeds else None
+        # FIX: recover once debugging is done
+        # prompt_embeds_shape = self.prompt_embeds.shape if self.prompt_embeds else None
         return (
             f"NewRequestData("
             f"req_id={self.req_id},"
             f"prompt_token_ids={self.prompt_token_ids},"
-            f"mm_features={self.mm_features},"
-            f"sampling_params={self.sampling_params},"
-            f"block_ids={self.block_ids},"
-            f"num_computed_tokens={self.num_computed_tokens},"
-            f"lora_request={self.lora_request},"
-            f"prompt_embeds_shape={prompt_embeds_shape}"
+            # f"mm_features={self.mm_features},"
+            # f"sampling_params={self.sampling_params},"
+            # f"block_ids={self.block_ids},"
+            # f"num_computed_tokens={self.num_computed_tokens},"
+            # f"lora_request={self.lora_request},"
+            # f"prompt_embeds_shape={prompt_embeds_shape}"
             ")"
         )
 
@@ -114,6 +115,15 @@ class CachedRequestData:
     new_block_ids: list[tuple[list[int], ...] | None]
     num_computed_tokens: list[int]
     num_output_tokens: list[int]
+
+    def __repr__(self) -> str:
+        # FIX: remove once debugging is done
+        return (
+            f"CachedRequestData("
+            f"req_ids={self.req_ids},"
+            f"num_computed_tokens={self.num_computed_tokens},"
+            ")"
+        )
 
     @property
     def num_reqs(self) -> int:

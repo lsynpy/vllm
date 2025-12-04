@@ -1354,6 +1354,11 @@ class GPUModelRunner(
             num_draft_tokens = None
             spec_decode_metadata = None
             num_sampled_tokens = np.ones(num_reqs, dtype=np.int32)
+            logger.debug(
+                "normal forward, logits_indices: %s, num_sampled_tokens: %s",
+                logits_indices,
+                num_sampled_tokens,
+            )
         else:
             # Get the number of draft tokens for each request.
             # Iterate over the dictionary rather than all requests since not all
@@ -1385,6 +1390,11 @@ class GPUModelRunner(
             self.num_decode_draft_tokens.np[:num_reqs] = num_decode_draft_tokens
             self.num_decode_draft_tokens.np[num_reqs:].fill(-1)
             self.num_decode_draft_tokens.copy_to_gpu()
+            logger.debug(
+                "spec decode forward, logits_indices: %s, num_sampled_tokens: %s",
+                logits_indices,
+                num_sampled_tokens,
+            )
 
         # Hot-Swap lora model
         if self.lora_config:

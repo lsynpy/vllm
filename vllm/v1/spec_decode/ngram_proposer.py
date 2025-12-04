@@ -119,7 +119,7 @@ class NgramProposer:
                 self.valid_ngram_num_drafts,
             )
 
-            logger.info("token_ids_cpu: %s", str(token_ids_cpu.tolist()))
+            logger.debug("token_ids_cpu: %s", str(token_ids_cpu.tolist()))
             # Restore original number of threads.
             set_num_threads(original_num_numba_threads)
 
@@ -130,7 +130,7 @@ class NgramProposer:
                 )
             else:
                 draft_token_ids.append([])
-        logger.info("proposed draft_token_ids: %s", draft_token_ids)
+        logger.debug("proposed draft_token_ids: %s", draft_token_ids)
         return draft_token_ids
 
     def propose(

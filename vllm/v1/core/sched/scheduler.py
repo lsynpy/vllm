@@ -1050,6 +1050,11 @@ class Scheduler(SchedulerInterface):
                 new_token_ids, stopped = self._update_request_with_output(
                     request, new_token_ids
                 )
+                logger.debug(
+                    "appended new tokens to req-%s, tokens: %s",
+                    request.request_id,
+                    new_token_ids,
+                )
 
             # Stop checking for pooler models.
             pooler_output = None
