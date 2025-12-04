@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, cast
 
 import numpy as np
 import torch
-import torch.distributed
 import torch.nn as nn
 from tqdm import tqdm
 
@@ -1459,6 +1458,11 @@ class GPUModelRunner(
             num_draft_tokens = None
             spec_decode_metadata = None
             num_sampled_tokens = np.ones(num_reqs, dtype=np.int32)
+            logger.debug(
+                "normal forward, logits_indices: %s, num_sampled_tokens: %s",
+                logits_indices,
+                num_sampled_tokens,
+            )
         else:
             # Get the number of draft tokens for each request.
             # Iterate over the dictionary rather than all requests since not all
@@ -1490,6 +1494,11 @@ class GPUModelRunner(
             self.num_decode_draft_tokens.np[:num_reqs] = num_decode_draft_tokens
             self.num_decode_draft_tokens.np[num_reqs:].fill(-1)
             self.num_decode_draft_tokens.copy_to_gpu()
+            logger.debug(
+                "spec decode forward, logits_indices: %s, num_sampled_tokens: %s",
+                logits_indices,
+                num_sampled_tokens,
+            )
 
         # Hot-Swap lora model
         if self.lora_config:
@@ -1549,6 +1558,22 @@ class GPUModelRunner(
         attn_metadata: PerLayerAttnMetadata = {}
         if ubatch_slices is not None:
             attn_metadata = [dict() for _ in range(len(ubatch_slices))]
+
+        # Used in the below loop
+        query_start_loc = self.query_start_loc.gpu[: num_reqs + 1]
+        query_start_loc_cpu = self.query_start_loc.cpu[: num_reqs + 1]
+        seq_lens = self.seq_lens.gpu[:num_reqs]
+        seq_lens_cpu = self.seq_lens.cpu[:num_reqs]
+        num_computed_tokens_cpu = self.input_batch.num_computed_tokens_cpu_tensor[
+            :num_reqs
+        ]
+
+        dcp_local_seq_lens, dcp_local_seq_lens_cpu = None, None
+        if self.dcp_world_size > 1:
+            dcp_local_seq_lens = self.dcp_local_seq_lens.gpu[:num_reqs]
+            dcp_local_seq_lens_cpu = self.dcp_local_seq_lens.cpu[:num_reqs]
+
+        spec_decode_common_attn_metadata = None
 
         if for_cudagraph_capture:
             # For some attention backends (e.g. FA) with sliding window models we need
@@ -3058,6 +3083,12 @@ class GPUModelRunner(
                 assert broadcasted is not None
                 logits = broadcasted["logits"]
 
+        logger.info(
+            "forward pass get hidden states: %s, sample_hidden_states: %s, logits: %s",
+            hidden_states.shape,
+            sample_hidden_states.shape,
+            logits.shape,
+        )
         self.execute_model_state = ExecuteModelState(
             scheduler_output,
             logits,
@@ -5253,6 +5284,14 @@ class GPUModelRunner(
         self.may_reinitialize_input_batch(kv_cache_config, kernel_block_sizes)
         kv_caches = self.initialize_kv_cache_tensors(
             kv_cache_config, kernel_block_sizes
+        )
+
+        total_kv_cache_bytes = sum(tensor.nbytes for tensor in kv_caches.values())
+        logger.info_once(
+            f"allocated {total_kv_cache_bytes / (1024**3):.2f} GB, "
+            f"{kv_cache_config.num_blocks} blocks, "
+            f"{total_kv_cache_bytes / (1024**2) / kv_cache_config.num_blocks:.2f}"
+            f"MB per block, block size: {kernel_block_sizes}"
         )
 
         if self.speculative_config and self.speculative_config.use_eagle():

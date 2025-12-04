@@ -125,6 +125,15 @@ class CachedRequestData:
     num_computed_tokens: list[int]
     num_output_tokens: list[int]
 
+    def __repr__(self) -> str:
+        # FIX: remove once debugging is done
+        return (
+            f"CachedRequestData("
+            f"req_ids={self.req_ids},"
+            f"num_computed_tokens={self.num_computed_tokens},"
+            ")"
+        )
+
     @property
     def num_reqs(self) -> int:
         return len(self.req_ids)

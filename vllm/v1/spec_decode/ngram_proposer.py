@@ -6,6 +6,9 @@ import numpy as np
 from numba import get_num_threads, jit, njit, prange, set_num_threads
 
 from vllm.config import VllmConfig
+from vllm.logger import init_logger
+
+logger = init_logger(__name__)
 
 
 class NgramProposer:
@@ -116,6 +119,7 @@ class NgramProposer:
                 self.valid_ngram_num_drafts,
             )
 
+            logger.debug("token_ids_cpu: %s", str(token_ids_cpu.tolist()))
             # Restore original number of threads.
             set_num_threads(original_num_numba_threads)
 
@@ -126,7 +130,7 @@ class NgramProposer:
                 )
             else:
                 draft_token_ids.append([])
-
+        logger.debug("proposed draft_token_ids: %s", draft_token_ids)
         return draft_token_ids
 
     def propose(

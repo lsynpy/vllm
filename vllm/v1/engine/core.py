@@ -340,6 +340,16 @@ class EngineCore:
         if not self.scheduler.has_requests():
             return {}, False
         scheduler_output = self.scheduler.schedule()
+        logger.debug(
+            "scheduled_new_reqs: %s, scheduled_cached_reqs: %s, "
+            "num_scheduled_tokens: %s, "
+            "total_num_scheduled_tokens: %d, scheduled_spec_decode_tokens: %s",
+            scheduler_output.scheduled_new_reqs,
+            scheduler_output.scheduled_cached_reqs,
+            scheduler_output.num_scheduled_tokens,
+            scheduler_output.total_num_scheduled_tokens,
+            scheduler_output.scheduled_spec_decode_tokens,
+        )
         future = self.model_executor.execute_model(scheduler_output, non_block=True)
         grammar_output = self.scheduler.get_grammar_bitmask(scheduler_output)
         with self.log_error_detail(scheduler_output):
@@ -858,9 +868,11 @@ class EngineCoreProc(EngineCore):
         # Loop until process is sent a SIGINT or SIGTERM
         while True:
             # 1) Poll the input queue until there is work to do.
+            logger.debug("->" * 50)
             self._process_input_queue()
             # 2) Step the engine core and return the outputs.
             self._process_engine_step()
+            logger.debug("<-" * 50)
 
     def _process_input_queue(self):
         """Exits when an engine step needs to be performed."""
