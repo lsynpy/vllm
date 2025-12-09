@@ -1459,8 +1459,9 @@ class GPUModelRunner(
             spec_decode_metadata = None
             num_sampled_tokens = np.ones(num_reqs, dtype=np.int32)
             logger.debug(
-                "normal forward, logits_indices: %s, num_sampled_tokens: %s",
-                logits_indices,
+                "_prepare_input() for normal get: logits_indices: %s, "
+                "num_sampled_tokens: %s",
+                logits_indices.tolist(),
                 num_sampled_tokens,
             )
         else:
@@ -1495,8 +1496,9 @@ class GPUModelRunner(
             self.num_decode_draft_tokens.np[num_reqs:].fill(-1)
             self.num_decode_draft_tokens.copy_to_gpu()
             logger.debug(
-                "spec decode forward, logits_indices: %s, num_sampled_tokens: %s",
-                logits_indices,
+                "_prepare_input() for SD get: logits_indices: %s, "
+                "num_sampled_tokens: %s",
+                logits_indices.tolist(),
                 num_sampled_tokens,
             )
 
@@ -3017,6 +3019,14 @@ class GPUModelRunner(
             record_function_or_nullcontext("gpu_model_runner: forward"),
             self.maybe_get_kv_connector_output(scheduler_output) as kv_connector_output,
         ):
+            logger.debug(
+                "_model_forward() on: input_ids: %s, positions: %s, "
+                "intermediate_tensors: %s, inputs_embeds: %s",
+                input_ids,
+                positions,
+                intermediate_tensors,
+                inputs_embeds,
+            )
             model_output = self._model_forward(
                 input_ids=input_ids,
                 positions=positions,
@@ -3033,6 +3043,7 @@ class GPUModelRunner(
                 # Common case.
                 hidden_states = model_output
                 aux_hidden_states = None
+            logger.debug("_model_forward() get: hidden_states: %s", hidden_states.shape)
 
             if not self.broadcast_pp_output:
                 # Common case.
@@ -3083,9 +3094,8 @@ class GPUModelRunner(
                 assert broadcasted is not None
                 logits = broadcasted["logits"]
 
-        logger.info(
-            "forward pass get hidden states: %s, sample_hidden_states: %s, logits: %s",
-            hidden_states.shape,
+        logger.debug(
+            "use logits_indices get: sample_hidden_states: %s, logits: %s",
             sample_hidden_states.shape,
             logits.shape,
         )

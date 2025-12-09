@@ -706,6 +706,22 @@ class FlashAttentionImpl(AttentionImpl):
                     num_splits=attn_metadata.max_num_splits,
                     s_aux=self.sinks,
                 )
+                logger.debug_once(
+                    "call flash_attn with params: q.shape: %s, k.shape: %s, v.shape: %s"
+                    ", number_actual_tokens: %d, cu_seqlens_q: %s, max_seqlen_q: %s"
+                    ", seqused_k: %s, max_seqlen_k: %s, block_table: %s"
+                    "\nflash_attn out: %s",
+                    query.shape,
+                    key_cache.shape,
+                    value_cache.shape,
+                    num_actual_tokens,
+                    cu_seqlens_q,
+                    max_seqlen_q,
+                    seqused_k,
+                    max_seqlen_k,
+                    block_table,
+                    output.shape,
+                )
                 return output
 
         # Cascade attention (rare case).

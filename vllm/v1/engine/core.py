@@ -341,7 +341,7 @@ class EngineCore:
             return {}, False
         scheduler_output = self.scheduler.schedule()
         logger.debug(
-            "scheduled_new_reqs: %s, scheduled_cached_reqs: %s, "
+            "schedule result: scheduled_new_reqs: %s, scheduled_cached_reqs: %s, "
             "num_scheduled_tokens: %s, "
             "total_num_scheduled_tokens: %d, scheduled_spec_decode_tokens: %s",
             scheduler_output.scheduled_new_reqs,

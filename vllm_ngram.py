@@ -3,6 +3,7 @@
 import os
 
 os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
+os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
 
 from transformers import AutoTokenizer
 
@@ -17,10 +18,10 @@ TEMPERATURE = 0
 OUTPUT_LEN = 32
 
 PROMPTS = [
-    # "Hello, my name is",
+    # "List the first ten prime numbers:",
     # "The capital of France is",
-    "List the first ten prime numbers:",
-    # "The meaning of life is",
+    # "Once upon a time in a land far, far away,",
+    "List 10 numbers only contains digit 1:",
 ]
 
 
@@ -46,7 +47,7 @@ def main():
         trust_remote_code=True,
         tensor_parallel_size=1,
         enable_chunked_prefill=False,
-        enforce_eager=False,
+        enforce_eager=True,
         gpu_memory_utilization=0.2,
         speculative_config=speculative_config,
         disable_log_stats=False,
@@ -54,6 +55,8 @@ def main():
         max_num_seqs=1,
         limit_mm_per_prompt={"image": 5},
         disable_chunked_mm_input=True,
+        # Add compilation options
+        compilation_config={"cudagraph_capture_sizes": [1, 2, 4, 8]},
     )
 
     # Generate
