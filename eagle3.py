@@ -3,6 +3,7 @@
 import os
 
 from vllm import LLM, SamplingParams
+from vllm.v1.metrics.reader import Counter, Vector
 
 PROMPTS = [
     "List 10 numbers only contains digit 1:",
@@ -10,27 +11,77 @@ PROMPTS = [
 TARGET = os.path.expanduser("~/huggingface/Qwen3-1.7B")
 DRAFT = os.path.expanduser("~/huggingface/Qwen3-1.7B_eagle3")
 
-sampling_params = SamplingParams(temperature=0.0, max_tokens=32)
+NUM_SPEC_TOKENS = 5
+TEMPERATURE = 0
+OUTPUT_LEN = 32
 
-llm = LLM(
-    model=TARGET,
-    tensor_parallel_size=1,
-    enable_chunked_prefill=False,
-    enforce_eager=True,
-    gpu_memory_utilization=0.7,
-    speculative_config={
-        "model": DRAFT,
-        "draft_tensor_parallel_size": 1,
-        "num_speculative_tokens": 2,
-        "method": "eagle3",
-    },
-    max_model_len=32,
-    max_num_seqs=1,
-)
 
-outputs = llm.generate(PROMPTS, sampling_params)
+def main():
+    llm = LLM(
+        model=TARGET,
+        tensor_parallel_size=1,
+        enable_chunked_prefill=False,
+        enforce_eager=True,
+        gpu_memory_utilization=0.5,
+        speculative_config={
+            "model": DRAFT,
+            "num_speculative_tokens": NUM_SPEC_TOKENS,
+            "method": "eagle3",
+        },
+        max_model_len=32,
+        max_num_seqs=1,
+        disable_log_stats=False,
+    )
 
-for output in outputs:
-    prompt = output.prompt
-    generated_text = output.outputs[0].text
-    print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+    sampling_params = SamplingParams(temperature=TEMPERATURE, max_tokens=OUTPUT_LEN)
+    outputs = llm.generate(PROMPTS, sampling_params)
+
+    for output in outputs:
+        prompt = output.prompt
+        generated_text = output.outputs[0].text
+        print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+
+    # Collect and print metrics
+    metrics = llm.get_metrics()
+
+    total_num_output_tokens = sum(
+        len(output.outputs[0].token_ids) for output in outputs
+    )
+    num_drafts = 0
+    num_draft_tokens = 0
+    num_accepted_tokens = 0
+    acceptance_counts = [0] * NUM_SPEC_TOKENS
+
+    for metric in metrics:
+        if metric.name == "vllm:spec_decode_num_drafts":
+            assert isinstance(metric, Counter)
+            num_drafts += metric.value
+        elif metric.name == "vllm:spec_decode_num_draft_tokens":
+            assert isinstance(metric, Counter)
+            num_draft_tokens += metric.value
+        elif metric.name == "vllm:spec_decode_num_accepted_tokens":
+            assert isinstance(metric, Counter)
+            num_accepted_tokens += metric.value
+        elif metric.name == "vllm:spec_decode_num_accepted_tokens_per_pos":
+            assert isinstance(metric, Vector)
+            for pos in range(len(metric.values)):
+                acceptance_counts[pos] += metric.values[pos]
+
+    acceptance_length = 1 + (num_accepted_tokens / num_drafts) if num_drafts > 0 else 1
+
+    print("-" * 50)
+    print(f"total_num_output_tokens: {total_num_output_tokens}")
+    print(f"num_drafts: {num_drafts}")
+    print(f"num_draft_tokens: {num_draft_tokens}")
+    print(f"num_accepted_tokens: {num_accepted_tokens}")
+    print(f"mean acceptance length: {acceptance_length:.2f}")
+    print("-" * 50)
+
+    # Print acceptance at each token position
+    for i in range(len(acceptance_counts)):
+        acceptance_rate = acceptance_counts[i] / num_drafts if num_drafts > 0 else 0
+        print(f"acceptance at token {i}: {acceptance_rate:.2f}")
+
+
+if __name__ == "__main__":
+    main()
