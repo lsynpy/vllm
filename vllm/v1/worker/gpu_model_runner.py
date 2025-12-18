@@ -3022,8 +3022,8 @@ class GPUModelRunner(
             logger.debug(
                 "_model_forward() on: input_ids: %s, positions: %s, "
                 "intermediate_tensors: %s, inputs_embeds: %s",
-                input_ids,
-                positions,
+                input_ids.tolist() if input_ids is not None else None,
+                positions.tolist() if positions is not None else None,
                 intermediate_tensors,
                 inputs_embeds,
             )

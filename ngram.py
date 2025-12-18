@@ -5,7 +5,6 @@ import os
 os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
 os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
 
-from transformers import AutoTokenizer
 
 from vllm import LLM, SamplingParams
 from vllm.v1.metrics.reader import Counter, Vector
@@ -26,22 +25,6 @@ PROMPTS = [
 
 
 def main():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-
-    # Encode prompts
-    prompt_ids = [
-        tokenizer.encode(prompt, add_special_tokens=False) for prompt in PROMPTS
-    ]
-
-    # Configure ngram speculative decoding
-    speculative_config = {
-        "method": "ngram",
-        "num_speculative_tokens": NUM_SPEC_TOKENS,
-        "prompt_lookup_max": PROMPT_LOOKUP_MAX,
-        "prompt_lookup_min": PROMPT_LOOKUP_MIN,
-    }
-
-    # Initialize LLM
     llm = LLM(
         model=MODEL_DIR,
         trust_remote_code=True,
@@ -49,7 +32,12 @@ def main():
         enable_chunked_prefill=False,
         enforce_eager=True,
         gpu_memory_utilization=0.2,
-        speculative_config=speculative_config,
+        speculative_config={
+            "method": "ngram",
+            "num_speculative_tokens": NUM_SPEC_TOKENS,
+            "prompt_lookup_max": PROMPT_LOOKUP_MAX,
+            "prompt_lookup_min": PROMPT_LOOKUP_MIN,
+        },
         disable_log_stats=False,
         max_model_len=32,
         max_num_seqs=1,
@@ -61,11 +49,7 @@ def main():
 
     # Generate
     sampling_params = SamplingParams(temperature=TEMPERATURE, max_tokens=OUTPUT_LEN)
-    outputs = llm.generate(
-        [{"prompt_token_ids": x} for x in prompt_ids],
-        sampling_params=sampling_params,
-        use_tqdm=False,
-    )
+    outputs = llm.generate(PROMPTS, sampling_params, use_tqdm=False)
 
     for i, output in enumerate(outputs):
         print("-" * 50)

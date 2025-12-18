@@ -522,6 +522,7 @@ class EagleProposer:
 
         # [batch_size, num_speculative_tokens]
         draft_token_ids = torch.stack(draft_token_ids_list, dim=1)
+        logger.debug("proposed draft_token_ids: %s", draft_token_ids)
         return draft_token_ids
 
     def prepare_next_token_ids_cpu(
@@ -615,6 +616,12 @@ class EagleProposer:
             BLOCK_SIZE_TOKENS=BLOCK_SIZE_TOKENS,
         )
 
+        logger.debug(
+            "prepare_next_token_ids_padded: next_token_ids: %s"
+            ", valid_sampled_tokens_count: %s",
+            next_token_ids,
+            valid_sampled_tokens_count,
+        )
         return next_token_ids, valid_sampled_tokens_count
 
     def prepare_inputs_padded(

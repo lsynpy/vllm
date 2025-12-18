@@ -2,6 +2,9 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import os
 
+os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
+os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
+
 from vllm import LLM, SamplingParams
 from vllm.v1.metrics.reader import Counter, Vector
 
@@ -34,7 +37,7 @@ def main():
     )
 
     sampling_params = SamplingParams(temperature=TEMPERATURE, max_tokens=OUTPUT_LEN)
-    outputs = llm.generate(PROMPTS, sampling_params)
+    outputs = llm.generate(PROMPTS, sampling_params, use_tqdm=False)
 
     for output in outputs:
         prompt = output.prompt
