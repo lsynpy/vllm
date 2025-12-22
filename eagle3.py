@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+"""
+env VLLM_PRECOMPILED_WHEEL_LOCATION="https://wheels.vllm.ai/dc9905368dd6f298395adaa20eeec37415c0cefe/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl" VLLM_USE_PRECOMPILED=1 uv pip install --editable . -v
+"""  # noqa: E501
+
 import os
 
 os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
@@ -35,8 +39,7 @@ def main():
         disable_log_stats=False,
     )
 
-    sampling_params = SamplingParams(temperature=TEMPERATURE,
-                                     max_tokens=OUTPUT_LEN)
+    sampling_params = SamplingParams(temperature=TEMPERATURE, max_tokens=OUTPUT_LEN)
     outputs = llm.generate(PROMPTS, sampling_params, use_tqdm=False)
 
     for output in outputs:
