@@ -2857,8 +2857,8 @@ class GPUModelRunner(
     ) -> ModelRunnerOutput | IntermediateTensors | None:
         if self.execute_model_state is not None:
             raise RuntimeError(
-                "State error: sample_tokens() must be called "
-                "after execute_model() returns None."
+                "State error: sample_tokens() must be called after execute_model() "
+                "returns None."
             )
 
         # self._draft_token_ids is None when `input_fits_in_drafter=False`
@@ -2953,15 +2953,6 @@ class GPUModelRunner(
                     use_cascade_attn=cascade_attn_prefix_lens is not None,
                 )
 
-                logger.debug(
-                    "Running batch with cudagraph_mode: %s, batch_descriptor: %s, "
-                    "ubatch_slices: %s, num_tokens_across_dp: %s",
-                    cudagraph_mode,
-                    batch_desc,
-                    ubatch_slices,
-                    num_tokens_across_dp,
-                )
-
                 num_tokens_padded = batch_desc.num_tokens
                 num_reqs_padded = (
                     batch_desc.num_reqs if batch_desc.num_reqs is not None else num_reqs
@@ -3020,12 +3011,9 @@ class GPUModelRunner(
             self.maybe_get_kv_connector_output(scheduler_output) as kv_connector_output,
         ):
             logger.debug(
-                "_model_forward() on: input_ids: %s, positions: %s, "
-                "intermediate_tensors: %s, inputs_embeds: %s",
+                "_model_forward() on: input_ids: %s, positions: %s",
                 input_ids.tolist() if input_ids is not None else None,
                 positions.tolist() if positions is not None else None,
-                intermediate_tensors,
-                inputs_embeds,
             )
             model_output = self._model_forward(
                 input_ids=input_ids,
@@ -3388,8 +3376,8 @@ class GPUModelRunner(
                 # the cpu-side list[list[int]] of valid sampled tokens for each
                 # request, with invalid requests having empty lists.
                 assert isinstance(sampled_token_ids, list), (
-                    "sampled_token_ids should be a python list when"
-                    "padded-batch is disabled."
+                    "sampled_token_ids should be a python list whenpadded-batch is "
+                    "disabled."
                 )
                 next_token_ids = self.drafter.prepare_next_token_ids_cpu(
                     sampled_token_ids,
@@ -3403,8 +3391,8 @@ class GPUModelRunner(
                 # (num_reqs, num_spec_tokens + 1) with rejected tokens having
                 # value -1.
                 assert isinstance(sampled_token_ids, torch.Tensor), (
-                    "sampled_token_ids should be a torch.Tensor when"
-                    "padded-batch is enabled."
+                    "sampled_token_ids should be a torch.Tensor whenpadded-batch "
+                    "is enabled."
                 )
                 next_token_ids, valid_sampled_tokens_count = (
                     self.drafter.prepare_next_token_ids_padded(
@@ -3532,39 +3520,37 @@ class GPUModelRunner(
             if hasattr(self, "drafter"):
                 logger.info_once("Loading drafter model...")
                 self.drafter.load_model(self.model)
-                if (
-                    hasattr(self.drafter, "model")
-                    and is_mixture_of_experts(self.drafter.model)
-                    and self.parallel_config.enable_eplb
-                ):
-                    spec_config = self.vllm_config.speculative_config
-                    assert spec_config is not None
-                    assert spec_config.draft_model_config is not None
-                    logger.info_once(
-                        "EPLB is enabled for drafter model %s.",
-                        spec_config.draft_model_config.model,
-                    )
+            if (
+                hasattr(self.drafter, "model")
+                and is_mixture_of_experts(self.drafter.model)
+                and self.parallel_config.enable_eplb
+            ):
+                spec_config = self.vllm_config.speculative_config
+                assert spec_config is not None
+                assert spec_config.draft_model_config is not None
+                logger.info_once(
+                    "EPLB is enabled for drafter model %s.",
+                    spec_config.draft_model_config.model,
+                )
 
-                    global_expert_load = (
-                        global_expert_loads[eplb_models]
-                        if global_expert_loads
-                        else None
-                    )
-                    old_global_expert_indices = (
-                        old_global_expert_indices_per_model[eplb_models]
-                        if old_global_expert_indices_per_model
-                        else None
-                    )
-                    if self.eplb_state is None:
-                        self.eplb_state = EplbState(self.parallel_config, self.device)
-                    self.eplb_state.add_model(
-                        self.drafter.model,
-                        spec_config.draft_model_config,
-                        global_expert_load,
-                        old_global_expert_indices,
-                        rank_mapping,
-                    )
-                    eplb_models += 1
+                global_expert_load = (
+                    global_expert_loads[eplb_models] if global_expert_loads else None
+                )
+                old_global_expert_indices = (
+                    old_global_expert_indices_per_model[eplb_models]
+                    if old_global_expert_indices_per_model
+                    else None
+                )
+                if self.eplb_state is None:
+                    self.eplb_state = EplbState(self.parallel_config, self.device)
+                self.eplb_state.add_model(
+                    self.drafter.model,
+                    spec_config.draft_model_config,
+                    global_expert_load,
+                    old_global_expert_indices,
+                    rank_mapping,
+                )
+                eplb_models += 1
 
             if self.use_aux_hidden_state_outputs:
                 if not supports_eagle3(self.get_model()):
@@ -4328,8 +4314,8 @@ class GPUModelRunner(
             mm_config = self.model_config.multimodal_config
             if mm_config is not None and mm_config.skip_mm_profiling:
                 logger.info(
-                    "Skipping memory profiling for multimodal encoder and "
-                    "encoder cache."
+                    "Skipping memory profiling for multimodal encoder "
+                    "and encoder cache."
                 )
             else:
                 mm_budget = self.mm_budget
@@ -4755,18 +4741,14 @@ class GPUModelRunner(
                 self.compilation_config.splitting_ops_contain_attention()
                 or self.compilation_config.use_inductor_graph_partition
             ):
-                msg += (
-                    "; setting cudagraph_mode=PIECEWISE because "
-                    "attention is compiled piecewise"
-                )
+                msg += "; setting cudagraph_mode=PIECEWISE because attention is "
+                "compiled piecewise"
                 cudagraph_mode = self.compilation_config.cudagraph_mode = (
                     CUDAGraphMode.PIECEWISE
                 )
             else:
-                msg += (
-                    "; setting cudagraph_mode=NONE because "
-                    "attention is not compiled piecewise"
-                )
+                msg += "; setting cudagraph_mode=NONE because attention is not "
+                "compiled piecewise"
                 cudagraph_mode = self.compilation_config.cudagraph_mode = (
                     CUDAGraphMode.NONE
                 )

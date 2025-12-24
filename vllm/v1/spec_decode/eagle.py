@@ -231,6 +231,16 @@ class EagleProposer:
         sampling_metadata: SamplingMetadata,
         mm_embed_inputs: tuple[list[torch.Tensor], torch.Tensor] | None = None,
     ) -> torch.Tensor:
+        logger.debug(
+            "propose inputs: \n  target_token_ids: %s \n  target_positions: %s"
+            "\n  target_hidden_states: %s \n  next_token_ids: %s "
+            "\n  last_token_indices: %s",
+            target_token_ids.tolist(),
+            target_positions.tolist(),
+            target_hidden_states.shape,
+            next_token_ids.tolist(),
+            last_token_indices.tolist() if last_token_indices is not None else None,
+        )
         num_tokens = target_token_ids.shape[0]
         batch_size = next_token_ids.shape[0]
 
@@ -340,8 +350,15 @@ class EagleProposer:
 
         # Early exit if there is only one draft token to be generated.
         if self.num_speculative_tokens == 1:
-            draft_token_ids = logits.argmax(dim=-1)
-            return draft_token_ids.view(-1, 1)
+            draft_tokens = logits.argmax(dim=-1)
+            draft_token_ids = draft_tokens.view(-1, 1)
+            logger.debug(
+                "draft forward, get draft_token_ids: %s", draft_tokens.tolist()
+            )
+            logger.debug(
+                "proposed draft_token_ids: %s, early exit", draft_token_ids.tolist()
+            )
+            return draft_token_ids
 
         if self.uses_mrope:
             positions = target_positions[:, last_token_indices]
@@ -369,7 +386,7 @@ class EagleProposer:
             # [batch_size, num_tree_tokens]
             return torch.cat(draft_token_ids_list, dim=1)
 
-        draft_token_ids = logits.argmax(dim=-1)
+        draft_tokens = logits.argmax(dim=-1)
 
         if self.allowed_attn_types is not None and not isinstance(
             attn_metadata, self.allowed_attn_types
@@ -382,7 +399,8 @@ class EagleProposer:
             )
 
         # Generate the remaining draft tokens.
-        draft_token_ids_list = [draft_token_ids]
+        logger.debug("draft forward, get draft_token_ids: %s", draft_tokens.tolist())
+        draft_token_ids_list = [draft_tokens]
 
         batch_size_dp_padded, batch_size_across_dp = self._pad_batch_across_dp(
             num_tokens_unpadded=batch_size,
@@ -517,12 +535,17 @@ class EagleProposer:
                     last_hidden_states, hidden_states = ret_hidden_states
             hidden_states = hidden_states[:batch_size]
             logits = self.model.compute_logits(last_hidden_states[:batch_size])
-            draft_token_ids = logits.argmax(dim=-1)
-            draft_token_ids_list.append(draft_token_ids)
+            draft_tokens = logits.argmax(dim=-1)
+            draft_token_ids_list.append(draft_tokens)
+            logger.debug(
+                "draft forward %d, get draft_token_ids: %s",
+                token_index,
+                draft_tokens.tolist(),
+            )
 
         # [batch_size, num_speculative_tokens]
         draft_token_ids = torch.stack(draft_token_ids_list, dim=1)
-        logger.debug("proposed draft_token_ids: %s", draft_token_ids)
+        logger.debug("proposed draft_token_ids: %s", draft_token_ids.tolist())
         return draft_token_ids
 
     def prepare_next_token_ids_cpu(
@@ -617,10 +640,10 @@ class EagleProposer:
         )
 
         logger.debug(
-            "prepare_next_token_ids_padded: next_token_ids: %s"
-            ", valid_sampled_tokens_count: %s",
-            next_token_ids,
-            valid_sampled_tokens_count,
+            "prepare_next_token_ids_padded: next_token_ids: %s, "
+            "valid_sampled_tokens_count: %s",
+            next_token_ids.tolist(),
+            valid_sampled_tokens_count.tolist(),
         )
         return next_token_ids, valid_sampled_tokens_count
 
@@ -1081,8 +1104,8 @@ class EagleProposer:
                 # MTP model
                 share_embeddings = True
                 logger.info(
-                    "Detected MTP model. "
-                    "Sharing target model embedding weights with the draft model."
+                    "Detected MTP model. Sharing target model embedding weights "
+                    "with the draft model."
                 )
 
             if share_embeddings:
@@ -1091,8 +1114,8 @@ class EagleProposer:
                 self.model.model.embed_tokens = target_embed_tokens
         else:
             logger.info(
-                "The draft model's vocab embedding will be loaded separately"
-                " from the target model."
+                "The draft model's vocab embedding will be loaded separately "
+                "from the target model."
             )
 
         # share lm_head with the target model if needed
@@ -1130,8 +1153,8 @@ class EagleProposer:
             # MTP model
             share_lm_head = True
             logger.info(
-                "Detected MTP model. "
-                "Sharing target model lm_head weights with the draft model."
+                "Detected MTP model. Sharing target model lm_head weights "
+                "with the draft model."
             )
 
         if share_lm_head and hasattr(target_language_model, "lm_head"):

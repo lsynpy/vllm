@@ -550,8 +550,8 @@ class FlashAttentionImpl(AttentionImpl):
                 "Sinks are only supported in FlashAttention 3"
             )
             assert self.sinks.shape[0] == num_heads, (
-                "Sinks must have the same number of heads as the number of "
-                "heads in the layer"
+                "Sinks must have the same number of heads as the number "
+                "of heads in the layer"
             )
 
     def supports_quant_query_input(self) -> bool:
@@ -707,6 +707,7 @@ class FlashAttentionImpl(AttentionImpl):
                     s_aux=self.sinks,
                 )
                 logger.debug_once(
+                    # logger.debug(
                     "call flash_attn with params: q.shape: %s, k.shape: %s, v.shape: %s"
                     ", number_actual_tokens: %d, cu_seqlens_q: %s, max_seqlen_q: %s"
                     ", seqused_k: %s, max_seqlen_k: %s, block_table: %s"
@@ -717,7 +718,7 @@ class FlashAttentionImpl(AttentionImpl):
                     num_actual_tokens,
                     cu_seqlens_q,
                     max_seqlen_q,
-                    seqused_k,
+                    tuple(seqused_k.tolist()),
                     max_seqlen_k,
                     block_table,
                     output.shape,

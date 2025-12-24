@@ -14,7 +14,7 @@ PROMPTS = [
 TARGET = os.path.expanduser("~/huggingface/Qwen3-1.7B")
 DRAFT = os.path.expanduser("~/huggingface/Qwen3-1.7B_eagle3")
 
-NUM_SPEC_TOKENS = 5
+NUM_SPEC_TOKENS = 3
 TEMPERATURE = 0
 OUTPUT_LEN = 32
 

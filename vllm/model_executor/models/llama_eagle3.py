@@ -308,6 +308,15 @@ class Eagle3LlamaForCausalLM(LlamaForCausalLM):
         hidden_states: torch.Tensor,
         inputs_embeds: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        logger.debug("-" * 50)
+        logger.debug(
+            "draft forward inputs: input_ids: %s, positions: %s, "
+            "hidden_states: %s, inputs_embeds: %s",
+            input_ids.tolist(),
+            positions.tolist(),
+            hidden_states.shape,
+            inputs_embeds.shape if inputs_embeds is not None else None,
+        )
         return self.model(input_ids, positions, hidden_states, inputs_embeds)
 
     def compute_logits(
@@ -317,8 +326,8 @@ class Eagle3LlamaForCausalLM(LlamaForCausalLM):
         logits = self.logits_processor(self.lm_head, hidden_states)
         if self.draft_id_to_target_id is None:
             assert logits.shape[1] == self.config.vocab_size, (
-                "Expected logits to have shape "
-                f"(*, {self.config.vocab_size}), but got {logits.shape}"
+                f"Expected logits to have shape (*, {self.config.vocab_size}), "
+                f"but got {logits.shape}"
             )
             return logits
 
