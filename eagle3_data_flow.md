@@ -1,4 +1,4 @@
-## Eagle data flow
+# Eagle data flow
 
 ```cpp
 schedule result:
@@ -189,4 +189,3 @@ proposed draft_token_ids: [[220, 16, 11]]
 
 appended new tokens to req-0, tokens: [16, 11]
 ```
-

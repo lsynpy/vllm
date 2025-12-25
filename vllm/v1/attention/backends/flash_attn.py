@@ -708,10 +708,10 @@ class FlashAttentionImpl(AttentionImpl):
                 )
                 logger.debug_once(
                     # logger.debug(
-                    "call flash_attn with params: q.shape: %s, k.shape: %s, v.shape: %s"
-                    ", number_actual_tokens: %d, cu_seqlens_q: %s, max_seqlen_q: %s"
-                    ", seqused_k: %s, max_seqlen_k: %s, block_table: %s"
-                    "\nflash_attn out: %s",
+                    "call flash_attn with params:\n  q.shape: %s\n  k.shape: %s"
+                    "\n  v.shape: %s\n  number_actual_tokens: %d\n  cu_seqlens_q: %s"
+                    "\n  max_seqlen_q: %s\n  seqused_k: %s\n  max_seqlen_k: %s"
+                    "\n  block_table: %s\nflash_attn out: %s",
                     query.shape,
                     key_cache.shape,
                     value_cache.shape,

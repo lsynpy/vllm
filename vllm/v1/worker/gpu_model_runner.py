@@ -5280,7 +5280,7 @@ class GPUModelRunner(
 
         total_kv_cache_bytes = sum(tensor.nbytes for tensor in kv_caches.values())
         logger.info_once(
-            f"allocated {total_kv_cache_bytes / (1024**3):.2f} GB, "
+            f"kvcache allocated {total_kv_cache_bytes / (1024**3):.2f} GB, "
             f"{kv_cache_config.num_blocks} blocks, "
             f"{total_kv_cache_bytes / (1024**2) / kv_cache_config.num_blocks:.2f}"
             f"MB per block, block size: {kernel_block_sizes}"

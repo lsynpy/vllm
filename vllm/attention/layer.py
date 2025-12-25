@@ -823,6 +823,12 @@ def get_attention_context(
         attn_metadata = attn_metadata[layer_name]
     attn_layer: Attention | MLAAttention = forward_context.no_compile_layers[layer_name]
     kv_cache = attn_layer.kv_cache[forward_context.virtual_engine]
+    logger.debug(
+        "layer_name=%s, attn_layer object ID=%s, kv_cache tensor=%s",
+        layer_name,
+        id(attn_layer),
+        kv_cache.shape,
+    )
     return attn_metadata, attn_layer, kv_cache
 
 
