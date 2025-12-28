@@ -1459,8 +1459,8 @@ class GPUModelRunner(
             spec_decode_metadata = None
             num_sampled_tokens = np.ones(num_reqs, dtype=np.int32)
             logger.debug(
-                "_prepare_input() for normal get: logits_indices: %s, "
-                "num_sampled_tokens: %s",
+                "_prepare_input() for normal get:\n  logits_indices: %s"
+                "\n  num_sampled_tokens: %s",
                 logits_indices.tolist(),
                 num_sampled_tokens,
             )
@@ -3011,7 +3011,7 @@ class GPUModelRunner(
             self.maybe_get_kv_connector_output(scheduler_output) as kv_connector_output,
         ):
             logger.debug(
-                "_model_forward() on: input_ids: %s, positions: %s",
+                "_model_forward() on:\n  input_ids: %s\n  positions: %s",
                 input_ids.tolist() if input_ids is not None else None,
                 positions.tolist() if positions is not None else None,
             )
@@ -3083,7 +3083,7 @@ class GPUModelRunner(
                 logits = broadcasted["logits"]
 
         logger.debug(
-            "use logits_indices get: sample_hidden_states: %s, logits: %s",
+            "use logits_indices get:\n  sample_hidden_states: %s\n  logits: %s",
             sample_hidden_states.shape,
             logits.shape,
         )

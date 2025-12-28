@@ -68,20 +68,25 @@ class NewRequestData:
         )
 
     def __repr__(self) -> str:
-        prompt_embeds_shape = (
-            self.prompt_embeds.shape if self.prompt_embeds is not None else None
-        )
+        # prompt_embeds_shape = (
+        #     self.prompt_embeds.shape if self.prompt_embeds is not None else None
+        # )
         return (
+            # f"NewRequestData("
+            # f"req_id={self.req_id},"
+            # f"prompt_token_ids={self.prompt_token_ids},"
+            # f"prefill_token_ids={self.prefill_token_ids},"
+            # f"mm_features={self.mm_features},"
+            # f"sampling_params={self.sampling_params},"
+            # f"block_ids={self.block_ids},"
+            # f"num_computed_tokens={self.num_computed_tokens},"
+            # f"lora_request={self.lora_request},"
+            # f"prompt_embeds_shape={prompt_embeds_shape}"
+            # ")"
             f"NewRequestData("
             f"req_id={self.req_id},"
             f"prompt_token_ids={self.prompt_token_ids},"
-            f"prefill_token_ids={self.prefill_token_ids},"
-            f"mm_features={self.mm_features},"
-            f"sampling_params={self.sampling_params},"
             f"block_ids={self.block_ids},"
-            f"num_computed_tokens={self.num_computed_tokens},"
-            f"lora_request={self.lora_request},"
-            f"prompt_embeds_shape={prompt_embeds_shape}"
             ")"
         )
 
@@ -228,6 +233,17 @@ class SchedulerOutput:
             num_common_prefix_blocks=[],
             finished_req_ids=set(),
             free_encoder_mm_hashes=[],
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"\n  scheduled_new_reqs: {self.scheduled_new_reqs}"
+            f"\n  scheduled_cached_reqs: {self.scheduled_cached_reqs}"
+            f"\n  num_scheduled_tokens: {self.num_scheduled_tokens}"
+            f"\n  total_num_scheduled_tokens: {self.total_num_scheduled_tokens}"
+            f"\n  scheduled_spec_decode_tokens: {self.scheduled_spec_decode_tokens}"
+            f"\n  num_common_prefix_blocks: {self.num_common_prefix_blocks}"
+            f"\n  finished_req_ids: {self.finished_req_ids}"
         )
 
 

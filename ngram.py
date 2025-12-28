@@ -40,7 +40,7 @@ def main():
         },
         disable_log_stats=False,
         max_model_len=32,
-        max_num_seqs=1,
+        max_num_seqs=4,
         limit_mm_per_prompt={"image": 5},
         disable_chunked_mm_input=True,
         # Add compilation options

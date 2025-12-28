@@ -310,12 +310,11 @@ class Eagle3LlamaForCausalLM(LlamaForCausalLM):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         logger.debug("-" * 50)
         logger.debug(
-            "draft forward inputs: input_ids: %s, positions: %s, "
-            "hidden_states: %s, inputs_embeds: %s",
+            "draft forward inputs:\n  input_ids: %s\n  positions: %s"
+            "\n  hidden_states: %s",
             input_ids.tolist(),
             positions.tolist(),
             hidden_states.shape,
-            inputs_embeds.shape if inputs_embeds is not None else None,
         )
         return self.model(input_ids, positions, hidden_states, inputs_embeds)
 

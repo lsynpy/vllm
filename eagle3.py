@@ -4,11 +4,15 @@ import os
 
 os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
 os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
+os.environ["TRITON_INTERPRET"] = "1"
 
 from vllm import LLM, SamplingParams
 from vllm.v1.metrics.reader import Counter, Vector
 
 PROMPTS = [
+    "List the first ten prime numbers:",
+    "The capital of France is",
+    "Once upon a time in a land far, far away,",
     "List 10 numbers only contains digit 1:",
 ]
 TARGET = os.path.expanduser("~/huggingface/Qwen3-1.7B")
@@ -16,7 +20,7 @@ DRAFT = os.path.expanduser("~/huggingface/Qwen3-1.7B_eagle3")
 
 NUM_SPEC_TOKENS = 3
 TEMPERATURE = 0
-OUTPUT_LEN = 32
+OUTPUT_LEN = 8
 
 
 def main():
@@ -32,7 +36,7 @@ def main():
             "method": "eagle3",
         },
         max_model_len=32,
-        max_num_seqs=1,
+        max_num_seqs=4,
         disable_log_stats=False,
     )
 

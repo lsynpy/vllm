@@ -353,10 +353,10 @@ class EagleProposer:
             draft_tokens = logits.argmax(dim=-1)
             draft_token_ids = draft_tokens.view(-1, 1)
             logger.debug(
-                "draft forward, get draft_token_ids: %s", draft_tokens.tolist()
+                "draft forward. get draft_token_ids: %s", draft_tokens.tolist()
             )
             logger.debug(
-                "proposed draft_token_ids: %s, early exit", draft_token_ids.tolist()
+                "proposed draft_token_ids: %s. early exit", draft_token_ids.tolist()
             )
             return draft_token_ids
 
@@ -399,7 +399,7 @@ class EagleProposer:
             )
 
         # Generate the remaining draft tokens.
-        logger.debug("draft forward, get draft_token_ids: %s", draft_tokens.tolist())
+        logger.debug("draft forward. get draft_token_ids: %s", draft_tokens.tolist())
         draft_token_ids_list = [draft_tokens]
 
         batch_size_dp_padded, batch_size_across_dp = self._pad_batch_across_dp(
@@ -538,11 +538,12 @@ class EagleProposer:
             draft_tokens = logits.argmax(dim=-1)
             draft_token_ids_list.append(draft_tokens)
             logger.debug(
-                "draft forward %d, get draft_token_ids: %s",
+                "draft forward %d. get draft_token_ids: %s",
                 token_index,
                 draft_tokens.tolist(),
             )
 
+        logger.debug("-" * 50)
         # [batch_size, num_speculative_tokens]
         draft_token_ids = torch.stack(draft_token_ids_list, dim=1)
         logger.debug("proposed draft_token_ids: %s", draft_token_ids.tolist())
@@ -640,8 +641,8 @@ class EagleProposer:
         )
 
         logger.debug(
-            "prepare_next_token_ids_padded: next_token_ids: %s, "
-            "valid_sampled_tokens_count: %s",
+            "prepare_next_token_ids_padded:\n  next_token_ids: %s"
+            "\n  valid_sampled_tokens_count: %s",
             next_token_ids.tolist(),
             valid_sampled_tokens_count.tolist(),
         )
@@ -667,6 +668,16 @@ class EagleProposer:
             (num_reqs,), dtype=torch.int32, device=device
         )
 
+        logger.debug(
+            "prepare_inputs_padded before kernel:\n  cu_num_draft_tokens: %s"
+            "\n  valid_sampled_tokens_count: %s\n  query_start_loc: %s"
+            "\n  token_indices_to_sample: %s\n  num_reqs: %s",
+            spec_decode_metadata.cu_num_draft_tokens.tolist(),
+            valid_sampled_tokens_count.tolist(),
+            common_attn_metadata.query_start_loc_cpu.tolist(),
+            token_indices_to_sample.tolist(),
+            num_reqs,
+        )
         # Kernel grid: one program per request (row)
         grid = (num_reqs,)
         eagle_prepare_inputs_padded_kernel[grid](
@@ -674,6 +685,16 @@ class EagleProposer:
             valid_sampled_tokens_count,
             common_attn_metadata.query_start_loc,
             token_indices_to_sample,
+            num_reqs,
+        )
+        logger.debug(
+            "prepare_inputs_padded after kernel:\n  cu_num_draft_tokens: %s"
+            "\n  valid_sampled_tokens_count: %s\n  query_start_loc: %s"
+            "\n  token_indices_to_sample: %s\n  num_reqs: %s",
+            spec_decode_metadata.cu_num_draft_tokens.tolist(),
+            valid_sampled_tokens_count.tolist(),
+            common_attn_metadata.query_start_loc_cpu.tolist(),
+            token_indices_to_sample.tolist(),
             num_reqs,
         )
 

@@ -340,16 +340,7 @@ class EngineCore:
         if not self.scheduler.has_requests():
             return {}, False
         scheduler_output = self.scheduler.schedule()
-        logger.debug(
-            "schedule result: scheduled_new_reqs: %s, scheduled_cached_reqs: %s, "
-            "num_scheduled_tokens: %s, "
-            "total_num_scheduled_tokens: %d, scheduled_spec_decode_tokens: %s",
-            scheduler_output.scheduled_new_reqs,
-            scheduler_output.scheduled_cached_reqs,
-            scheduler_output.num_scheduled_tokens,
-            scheduler_output.total_num_scheduled_tokens,
-            scheduler_output.scheduled_spec_decode_tokens,
-        )
+        logger.debug("schedule result: %s", scheduler_output)
         future = self.model_executor.execute_model(scheduler_output, non_block=True)
         grammar_output = self.scheduler.get_grammar_bitmask(scheduler_output)
         with self.log_error_detail(scheduler_output):

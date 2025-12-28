@@ -454,8 +454,8 @@ class MultiHeadAttention(nn.Module):
         self.layer_name = prefix
 
         assert self.num_heads % self.num_kv_heads == 0, (
-            f"num_heads ({self.num_heads}) is not "
-            f"divisible by num_kv_heads ({self.num_kv_heads})"
+            f"num_heads ({self.num_heads}) is not divisible by num_kv_heads "
+            f"({self.num_kv_heads})"
         )
         self.num_queries_per_kv = self.num_heads // self.num_kv_heads
 
@@ -823,12 +823,6 @@ def get_attention_context(
         attn_metadata = attn_metadata[layer_name]
     attn_layer: Attention | MLAAttention = forward_context.no_compile_layers[layer_name]
     kv_cache = attn_layer.kv_cache[forward_context.virtual_engine]
-    logger.debug(
-        "layer_name=%s, attn_layer object ID=%s, kv_cache tensor=%s",
-        layer_name,
-        id(attn_layer),
-        kv_cache.shape,
-    )
     return attn_metadata, attn_layer, kv_cache
 
 
