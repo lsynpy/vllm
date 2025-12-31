@@ -3542,24 +3542,26 @@ class GPUModelRunner(
                         spec_config.draft_model_config.model,
                     )
 
-                global_expert_load = (
-                    global_expert_loads[eplb_models] if global_expert_loads else None
-                )
-                old_global_expert_indices = (
-                    old_global_expert_indices_per_model[eplb_models]
-                    if old_global_expert_indices_per_model
-                    else None
-                )
-                if self.eplb_state is None:
-                    self.eplb_state = EplbState(self.parallel_config, self.device)
-                self.eplb_state.add_model(
-                    self.drafter.model,
-                    spec_config.draft_model_config,
-                    global_expert_load,
-                    old_global_expert_indices,
-                    rank_mapping,
-                )
-                eplb_models += 1
+                    global_expert_load = (
+                        global_expert_loads[eplb_models]
+                        if global_expert_loads
+                        else None
+                    )
+                    old_global_expert_indices = (
+                        old_global_expert_indices_per_model[eplb_models]
+                        if old_global_expert_indices_per_model
+                        else None
+                    )
+                    if self.eplb_state is None:
+                        self.eplb_state = EplbState(self.parallel_config, self.device)
+                    self.eplb_state.add_model(
+                        self.drafter.model,
+                        spec_config.draft_model_config,
+                        global_expert_load,
+                        old_global_expert_indices,
+                        rank_mapping,
+                    )
+                    eplb_models += 1
 
             if self.use_aux_hidden_state_outputs:
                 if not supports_eagle3(self.get_model()):
