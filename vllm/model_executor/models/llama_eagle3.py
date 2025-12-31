@@ -223,6 +223,7 @@ class LlamaModel(nn.Module):
         params_dict = dict(self.named_parameters())
         loaded_params: set[str] = set()
         for name, loaded_weight in weights:
+            logger.debug("Loading llama model weight: %s", name)
             if "midlayer." in name:
                 name = name.replace("midlayer.", "layers.0.")
             # Handle kv cache quantization scales
@@ -380,4 +381,5 @@ class Eagle3LlamaForCausalLM(LlamaForCausalLM):
             skip_prefixes=None,
             skip_substrs=skip_substrs,
         )
+        logger.debug("loading %s\nskipping %s", model_weights.keys(), skip_substrs)
         loader.load_weights(model_weights.items())

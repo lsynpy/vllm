@@ -16,6 +16,8 @@ from os import path
 from types import MethodType
 from typing import Any, Literal, cast
 
+import torch
+
 import vllm.envs as envs
 
 _FORMAT = (
@@ -223,6 +225,17 @@ def suppress_logging(level: int = logging.INFO) -> Generator[None, Any, None]:
     logging.disable(level)
     yield
     logging.disable(current_level)
+
+
+# Global counter for tensor saving
+_tensor_save_counter = 0
+
+
+def save_tensor(tensor, filename_prefix: str = "tensor"):
+    global _tensor_save_counter
+    _tensor_save_counter += 1
+    filename = f"{_tensor_save_counter}_{filename_prefix}.pt"
+    torch.save(tensor, filename)
 
 
 # The root logger is initialized when the module is imported.

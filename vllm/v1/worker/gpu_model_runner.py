@@ -3027,11 +3027,20 @@ class GPUModelRunner(
             if self.use_aux_hidden_state_outputs:
                 # True when EAGLE 3 is used.
                 hidden_states, aux_hidden_states = model_output
+                logger.debug(
+                    "eagle target model forward get:\n  hidden_states: %s"
+                    "\n  aux_hidden_states: %s x %s",
+                    hidden_states.shape,
+                    len(aux_hidden_states),
+                    aux_hidden_states[0].shape,
+                )
             else:
                 # Common case.
                 hidden_states = model_output
                 aux_hidden_states = None
-            logger.debug("_model_forward() get: hidden_states: %s", hidden_states.shape)
+                logger.debug(
+                    "model forward get:\n  hidden_states: %s", hidden_states.shape
+                )
 
             if not self.broadcast_pp_output:
                 # Common case.
@@ -3520,18 +3529,18 @@ class GPUModelRunner(
             if hasattr(self, "drafter"):
                 logger.info_once("Loading drafter model...")
                 self.drafter.load_model(self.model)
-            if (
-                hasattr(self.drafter, "model")
-                and is_mixture_of_experts(self.drafter.model)
-                and self.parallel_config.enable_eplb
-            ):
-                spec_config = self.vllm_config.speculative_config
-                assert spec_config is not None
-                assert spec_config.draft_model_config is not None
-                logger.info_once(
-                    "EPLB is enabled for drafter model %s.",
-                    spec_config.draft_model_config.model,
-                )
+                if (
+                    hasattr(self.drafter, "model")
+                    and is_mixture_of_experts(self.drafter.model)
+                    and self.parallel_config.enable_eplb
+                ):
+                    spec_config = self.vllm_config.speculative_config
+                    assert spec_config is not None
+                    assert spec_config.draft_model_config is not None
+                    logger.info_once(
+                        "EPLB is enabled for drafter model %s.",
+                        spec_config.draft_model_config.model,
+                    )
 
                 global_expert_load = (
                     global_expert_loads[eplb_models] if global_expert_loads else None

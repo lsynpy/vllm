@@ -51,6 +51,8 @@ propose inputs:
   next_token_ids: [220, 12095]
   last_token_indices: None
 
+set last_token_indices to [6, 11]
+
 --------------------------------------------------
 draft forward inputs:
   input_ids: [279, 1156, 5779, 10250, 5109, 25, 220, 6722, 315, 9625, 374, 12095]

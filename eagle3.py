@@ -2,18 +2,31 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import os
 
+import torch
+
 os.environ["VLLM_LOGGING_LEVEL"] = "DEBUG"
 os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
-os.environ["TRITON_INTERPRET"] = "1"
+# os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+# os.environ["TRITON_INTERPRET"] = "1"
 
 from vllm import LLM, SamplingParams
 from vllm.v1.metrics.reader import Counter, Vector
 
+# Determinism
+torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+    torch.cuda.manual_seed_all(42)
+torch.use_deterministic_algorithms(True)
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+
 PROMPTS = [
     "List the first ten prime numbers:",
-    "The capital of France is",
-    "Once upon a time in a land far, far away,",
-    "List 10 numbers only contains digit 1:",
+    # "The capital of France is",
+    # "Once upon a time in a land far, far away,",
+    # "List 10 numbers only contains digit 1:",
 ]
 TARGET = os.path.expanduser("~/huggingface/Qwen3-1.7B")
 DRAFT = os.path.expanduser("~/huggingface/Qwen3-1.7B_eagle3")

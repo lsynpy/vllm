@@ -246,6 +246,7 @@ class EagleProposer:
 
         if last_token_indices is None:
             last_token_indices = common_attn_metadata.query_start_loc[1:] - 1
+            logger.debug("set last_token_indices to %s", last_token_indices.tolist())
 
         if self.method == "eagle3":
             assert isinstance(self.model, Eagle3LlamaForCausalLM)
@@ -345,6 +346,7 @@ class EagleProposer:
                 hidden_states = last_hidden_states
             else:
                 last_hidden_states, hidden_states = ret_hidden_states
+
         sample_hidden_states = last_hidden_states[last_token_indices]
         logits = self.model.compute_logits(sample_hidden_states)
 
@@ -399,7 +401,9 @@ class EagleProposer:
             )
 
         # Generate the remaining draft tokens.
-        logger.debug("draft forward. get draft_token_ids: %s", draft_tokens.tolist())
+        logger.debug(
+            "draft forward. sampled draft_token_ids: %s", draft_tokens.tolist()
+        )
         draft_token_ids_list = [draft_tokens]
 
         batch_size_dp_padded, batch_size_across_dp = self._pad_batch_across_dp(
@@ -533,6 +537,7 @@ class EagleProposer:
                     hidden_states = ret_hidden_states
                 else:
                     last_hidden_states, hidden_states = ret_hidden_states
+
             hidden_states = hidden_states[:batch_size]
             logits = self.model.compute_logits(last_hidden_states[:batch_size])
             draft_tokens = logits.argmax(dim=-1)
