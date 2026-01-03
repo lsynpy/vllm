@@ -258,7 +258,7 @@ class EagleProposer:
                 "       [dfunc] Do %d DRAFT forward passes:\n"
                 "       [dfunc]   %s\n"
                 "       [dfunc]   combine_hidden_states(aux_hidden_states<%s>)"
-                " -> combined_hidden_states<%s>",
+                " -> hidden_states<%s>",
                 self.num_speculative_tokens,
                 "··" * 10,
                 list(target_hidden_states.shape),
