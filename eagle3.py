@@ -24,9 +24,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 PROMPTS = [
     "List the first ten prime numbers:",
-    # "The capital of France is",
-    # "Once upon a time in a land far, far away,",
-    # "List 10 numbers only contains digit 1:",
+    "The capital of France is",
+    "Once upon a time in a land far, far away,",
+    "List 10 numbers only contains digit 1:",
 ]
 TARGET = os.path.expanduser("~/huggingface/Qwen3-1.7B")
 DRAFT = os.path.expanduser("~/huggingface/Qwen3-1.7B_eagle3")
