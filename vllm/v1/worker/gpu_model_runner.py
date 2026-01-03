@@ -1496,8 +1496,8 @@ class GPUModelRunner(
             self.num_decode_draft_tokens.np[num_reqs:].fill(-1)
             self.num_decode_draft_tokens.copy_to_gpu()
             logger.debug(
-                "_prepare_input() for SD get: logits_indices: %s, "
-                "num_sampled_tokens: %s",
+                "_prepare_input() for SD get:\n  logits_indices: %s"
+                "\n  num_sampled_tokens: %s",
                 logits_indices.tolist(),
                 num_sampled_tokens,
             )
@@ -2576,16 +2576,27 @@ class GPUModelRunner(
             # Update output token ids with tokens sampled in last step
             # if async scheduling and required by current sampling params.
             self.input_batch.update_async_output_token_ids()
-            return self.sampler(
+            sampler_output = self.sampler(
                 logits=logits,
                 sampling_metadata=sampling_metadata,
             )
+            logger.debug(
+                "[dfunc] normal_sample(logits<%s>) -> %s",
+                list(logits.shape) if logits is not None else "None",
+                sampler_output.sampled_token_ids.tolist(),
+            )
+            return sampler_output
 
         sampler_output = self.rejection_sampler(
             spec_decode_metadata,
             None,  # draft_probs
             logits,
             sampling_metadata,
+        )
+        logger.debug(
+            "[dfunc] rejection_sample(logits<%s>) -> %s",
+            list(logits.shape) if logits is not None else "None",
+            sampler_output.sampled_token_ids.tolist(),
         )
         self._update_states_after_model_execute(sampler_output.sampled_token_ids)
         return sampler_output
@@ -3012,8 +3023,13 @@ class GPUModelRunner(
         ):
             logger.debug(
                 "_model_forward() on:\n  input_ids: %s\n  positions: %s",
-                input_ids.tolist() if input_ids is not None else None,
-                positions.tolist() if positions is not None else None,
+                input_ids.tolist() if input_ids is not None else "None",
+                positions.tolist(),
+            )
+            logger.debug(
+                "[dfunc] %s\n[dfunc] TARGET_forward(%s)",
+                "-" * 30,
+                input_ids.tolist() if input_ids is not None else "None",
             )
             model_output = self._model_forward(
                 input_ids=input_ids,
@@ -3034,6 +3050,12 @@ class GPUModelRunner(
                     len(aux_hidden_states),
                     aux_hidden_states[0].shape,
                 )
+                logger.debug(
+                    "[dfunc]   -> hidden_states<%s>, aux_hidden_states<%sx%s>",
+                    list(hidden_states.shape),
+                    len(aux_hidden_states),
+                    list(aux_hidden_states[0].shape),
+                )
             else:
                 # Common case.
                 hidden_states = model_output
@@ -3041,6 +3063,7 @@ class GPUModelRunner(
                 logger.debug(
                     "model forward get:\n  hidden_states: %s", hidden_states.shape
                 )
+                logger.debug("[dfunc] -> hidden_states<%s>", hidden_states.shape)
 
             if not self.broadcast_pp_output:
                 # Common case.
@@ -3095,6 +3118,14 @@ class GPUModelRunner(
             "use logits_indices get:\n  sample_hidden_states: %s\n  logits: %s",
             sample_hidden_states.shape,
             logits.shape,
+        )
+        logger.debug(
+            "[dfunc] select using logits_indices<%s>: hidden_states%s -> "
+            "sampled_hidden_states<%s> -> logits<%s>",
+            logits_indices.tolist(),
+            logits_indices.tolist(),
+            list(sample_hidden_states.shape),
+            list(logits.shape),
         )
         self.execute_model_state = ExecuteModelState(
             scheduler_output,
@@ -3152,7 +3183,6 @@ class GPUModelRunner(
 
         with record_function_or_nullcontext("gpu_model_runner: sample"):
             sampler_output = self._sample(logits, spec_decode_metadata)
-
         self.input_batch.prev_sampled_token_ids = None
 
         def propose_draft_token_ids(sampled_token_ids):

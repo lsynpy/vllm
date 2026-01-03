@@ -1115,9 +1115,16 @@ class Scheduler(SchedulerInterface):
                     request, new_token_ids
                 )
                 logger.debug(
-                    "appended new tokens to req-%s, tokens: %s",
-                    request.request_id,
+                    "append %s to req-%s<%s>",
                     new_token_ids,
+                    request.request_id,
+                    request.all_token_ids,
+                )
+                logger.debug(
+                    "   [dfunc] append %s to req-%s -> %s",
+                    new_token_ids,
+                    request.request_id,
+                    list(request.all_token_ids),
                 )
 
             # Stop checking for pooler models.
@@ -1300,6 +1307,9 @@ class Scheduler(SchedulerInterface):
                 )
             else:
                 request.spec_token_ids = spec_token_ids
+                logger.debug(
+                    "   [dfunc] set req-%s.spec_token_ids to %s", req_id, spec_token_ids
+                )
 
     def get_request_counts(self) -> tuple[int, int]:
         """Returns (num_running_reqs, num_waiting_reqs)."""

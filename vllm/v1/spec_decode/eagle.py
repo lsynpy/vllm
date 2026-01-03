@@ -250,10 +250,20 @@ class EagleProposer:
 
         if self.method == "eagle3":
             assert isinstance(self.model, Eagle3LlamaForCausalLM)
-            target_hidden_states = self.model.combine_hidden_states(
+            combined_hidden_states = self.model.combine_hidden_states(
                 target_hidden_states
             )
-            assert target_hidden_states.shape[-1] == self.hidden_size
+            assert combined_hidden_states.shape[-1] == self.hidden_size
+            logger.debug(
+                "       [dfunc] Do %d DRAFT forward passes:\n"
+                "       [dfunc]   %s\n"
+                "       [dfunc]   combine_hidden_states(aux_hidden_states<%s>)"
+                " -> combined_hidden_states<%s>",
+                self.num_speculative_tokens,
+                "··" * 10,
+                list(target_hidden_states.shape),
+                list(combined_hidden_states.shape),
+            )
         # Shift the input ids by one token.
         # E.g., [a1, b1, b2, c1, c2, c3] -> [b1, b2, c1, c2, c3, c3]
         self.input_ids[: num_tokens - 1] = target_token_ids[1:]
@@ -311,7 +321,7 @@ class EagleProposer:
 
         # copy inputs to buffer for cudagraph
         self._set_positions(num_tokens, target_positions)
-        self.hidden_states[:num_tokens] = target_hidden_states
+        self.hidden_states[:num_tokens] = combined_hidden_states
 
         if self.supports_mm_inputs:
             mm_embeds, is_mm_embed = mm_embed_inputs or (None, None)
@@ -347,6 +357,14 @@ class EagleProposer:
             else:
                 last_hidden_states, hidden_states = ret_hidden_states
 
+        logger.debug(
+            "       [dfunc]   DRAFT_forward(%s, hidden_states<%s>)"
+            " -> last_hidden_states<%s>, hidden_states<%s>",
+            input_ids.tolist() if input_ids is not None else "None",
+            list(combined_hidden_states.shape),
+            list(last_hidden_states.shape),
+            list(hidden_states.shape),
+        )
         sample_hidden_states = last_hidden_states[last_token_indices]
         logits = self.model.compute_logits(sample_hidden_states)
 
@@ -354,11 +372,26 @@ class EagleProposer:
         if self.num_speculative_tokens == 1:
             draft_tokens = logits.argmax(dim=-1)
             draft_token_ids = draft_tokens.view(-1, 1)
+
+            logger.debug(
+                "       [dfunc]   select using last_token_indices<%s>:\n"
+                "       [dfunc]     last_hidden_states%s"
+                " -> sampled_hidden_states<%s> -> logits<%s>",
+                last_token_indices.tolist(),
+                last_token_indices.tolist(),
+                list(sample_hidden_states.shape),
+                list(logits.shape),
+            )
             logger.debug(
                 "draft forward. get draft_token_ids: %s", draft_tokens.tolist()
             )
             logger.debug(
                 "proposed draft_token_ids: %s. early exit", draft_token_ids.tolist()
+            )
+            logger.debug(
+                "       [dfunc]   greedy sample: argmax(logits<%s>) -> %s",
+                list(logits.shape),
+                draft_token_ids.tolist(),
             )
             return draft_token_ids
 
@@ -376,6 +409,19 @@ class EagleProposer:
         else:
             hidden_states = hidden_states[last_token_indices]
 
+        logger.debug(
+            "       [dfunc]   select using last_token_indices<%s>:\n"
+            "       [dfunc]     last_hidden_states%s"
+            " -> sampled_hidden_states<%s> -> logits<%s>\n"
+            "       [dfunc]     hidden_states%s"
+            " -> hidden_states<%s> (for next draft forward input)",
+            last_token_indices.tolist(),
+            last_token_indices.tolist(),
+            list(sample_hidden_states.shape),
+            list(logits.shape),
+            last_token_indices.tolist(),
+            list(hidden_states.shape),
+        )
         if isinstance(attn_metadata, TreeAttentionMetadata):
             # Draft using tree attention.
             draft_token_ids_list = self.propose_tree(
@@ -400,10 +446,16 @@ class EagleProposer:
                 f"{self.allowed_attn_types}"
             )
 
-        # Generate the remaining draft tokens.
         logger.debug(
             "draft forward. sampled draft_token_ids: %s", draft_tokens.tolist()
         )
+        logger.debug(
+            "       [dfunc]   greedy sample: argmax(logits<%s>) -> %s",
+            list(logits.shape),
+            draft_tokens.tolist(),
+        )
+
+        # Generate the remaining draft tokens.
         draft_token_ids_list = [draft_tokens]
 
         batch_size_dp_padded, batch_size_across_dp = self._pad_batch_across_dp(
@@ -541,6 +593,22 @@ class EagleProposer:
             hidden_states = hidden_states[:batch_size]
             logits = self.model.compute_logits(last_hidden_states[:batch_size])
             draft_tokens = logits.argmax(dim=-1)
+            logger.debug(
+                "       [dfunc]   %s\n"
+                "       [dfunc]   DRAFT_forward(%s, hidden_states<%s>)"
+                " -> last_hidden_states<%s>, hidden_states<%s>\n"
+                "       [dfunc]   last_hidden_states<%s> -> logits<%s>\n"
+                "       [dfunc]   greedy sample: argmax(logits<%s>) -> %s",
+                "··" * 10,
+                input_ids.tolist(),
+                list(self.hidden_states[:input_batch_size].shape),
+                list(last_hidden_states.shape),
+                list(hidden_states.shape),
+                list(last_hidden_states.shape),
+                list(logits.shape),
+                list(logits.shape),
+                draft_tokens.tolist(),
+            )
             draft_token_ids_list.append(draft_tokens)
             logger.debug(
                 "draft forward %d. get draft_token_ids: %s",
@@ -552,6 +620,10 @@ class EagleProposer:
         # [batch_size, num_speculative_tokens]
         draft_token_ids = torch.stack(draft_token_ids_list, dim=1)
         logger.debug("proposed draft_token_ids: %s", draft_token_ids.tolist())
+        logger.debug(
+            "       [dfunc] propose DRAFT tokens: %s",
+            draft_token_ids.tolist(),
+        )
         return draft_token_ids
 
     def prepare_next_token_ids_cpu(
@@ -645,12 +717,12 @@ class EagleProposer:
             BLOCK_SIZE_TOKENS=BLOCK_SIZE_TOKENS,
         )
 
-        logger.debug(
-            "prepare_next_token_ids_padded:\n  next_token_ids: %s"
-            "\n  valid_sampled_tokens_count: %s",
-            next_token_ids.tolist(),
-            valid_sampled_tokens_count.tolist(),
-        )
+        # logger.debug(
+        #     "prepare_next_token_ids_padded:\n  next_token_ids: %s"
+        #     "\n  valid_sampled_tokens_count: %s",
+        #     next_token_ids.tolist(),
+        #     valid_sampled_tokens_count.tolist(),
+        # )
         return next_token_ids, valid_sampled_tokens_count
 
     def prepare_inputs_padded(
@@ -673,16 +745,16 @@ class EagleProposer:
             (num_reqs,), dtype=torch.int32, device=device
         )
 
-        logger.debug(
-            "prepare_inputs_padded before kernel:\n  cu_num_draft_tokens: %s"
-            "\n  valid_sampled_tokens_count: %s\n  query_start_loc: %s"
-            "\n  token_indices_to_sample: %s\n  num_reqs: %s",
-            spec_decode_metadata.cu_num_draft_tokens.tolist(),
-            valid_sampled_tokens_count.tolist(),
-            common_attn_metadata.query_start_loc_cpu.tolist(),
-            token_indices_to_sample.tolist(),
-            num_reqs,
-        )
+        # logger.debug(
+        #     "prepare_inputs_padded before kernel:\n  cu_num_draft_tokens: %s"
+        #     "\n  valid_sampled_tokens_count: %s\n  query_start_loc: %s"
+        #     "\n  token_indices_to_sample: %s\n  num_reqs: %s",
+        #     spec_decode_metadata.cu_num_draft_tokens.tolist(),
+        #     valid_sampled_tokens_count.tolist(),
+        #     common_attn_metadata.query_start_loc_cpu.tolist(),
+        #     token_indices_to_sample.tolist(),
+        #     num_reqs,
+        # )
         # Kernel grid: one program per request (row)
         grid = (num_reqs,)
         eagle_prepare_inputs_padded_kernel[grid](
@@ -692,16 +764,16 @@ class EagleProposer:
             token_indices_to_sample,
             num_reqs,
         )
-        logger.debug(
-            "prepare_inputs_padded after kernel:\n  cu_num_draft_tokens: %s"
-            "\n  valid_sampled_tokens_count: %s\n  query_start_loc: %s"
-            "\n  token_indices_to_sample: %s\n  num_reqs: %s",
-            spec_decode_metadata.cu_num_draft_tokens.tolist(),
-            valid_sampled_tokens_count.tolist(),
-            common_attn_metadata.query_start_loc_cpu.tolist(),
-            token_indices_to_sample.tolist(),
-            num_reqs,
-        )
+        # logger.debug(
+        #     "prepare_inputs_padded after kernel:\n  cu_num_draft_tokens: %s"
+        #     "\n  valid_sampled_tokens_count: %s\n  query_start_loc: %s"
+        #     "\n  token_indices_to_sample: %s\n  num_reqs: %s",
+        #     spec_decode_metadata.cu_num_draft_tokens.tolist(),
+        #     valid_sampled_tokens_count.tolist(),
+        #     common_attn_metadata.query_start_loc_cpu.tolist(),
+        #     token_indices_to_sample.tolist(),
+        #     num_reqs,
+        # )
 
         query_start_loc_cpu = common_attn_metadata.query_start_loc_cpu
         new_query_len_per_req = query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]
